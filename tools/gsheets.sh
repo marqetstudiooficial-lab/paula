@@ -39,10 +39,16 @@ fi
 TELO="$(printf '%s' "$ZAPROS" | jq --arg t "$TOKEN" '. + {token: $t}')"
 
 # Google периодически отвечает 404/500 на поток запросов — повторяем с паузой.
+#
+# Без -X POST намеренно: Apps Script отвечает на POST редиректом 302 на
+# script.googleusercontent.com, и результат оттуда забирается уже методом GET.
+# --data-binary сам включает POST для первого запроса, а curl при 302 корректно
+# переключается на GET. Флаг -X POST это ломает: он навязывает POST и редиректу,
+# на что Google отвечает 405 и HTML-страницей «Page Not Found».
 for POPYTKA in 1 2 3 4; do
-  if OTVET="$(curl -sS -L --fail-with-body -X POST "$URL" \
+  if OTVET="$(curl -sS -L --fail-with-body \
        -H 'Content-Type: application/json; charset=utf-8' \
-       --data-binary "$TELO" 2>/dev/null)"; then
+       --data-binary "$TELO" "$URL" 2>/dev/null)"; then
     printf '%s\n' "$OTVET"
     exit 0
   fi
