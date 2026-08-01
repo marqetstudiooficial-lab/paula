@@ -1,0 +1,7 @@
+{
+  "url": "https://script.google.com/macros/s/AKfycb.................../exec",
+  "token": "PEGA_AQUI_LA_CONTRASENA_GENERADA",
+  "tables": {
+    "presupuesto": "https://docs.google.com/spreadsheets/d/ID_DE_LA_HOJA/edit"
+  }
+}
