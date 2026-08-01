@@ -1,0 +1,6 @@
+{
+  "_comment": "Короткие имена таблиц. Не секрет — хранится в git. Пароль и адрес моста живут отдельно: в .gsheets.json или в переменных GSHEETS_URL / GSHEETS_TOKEN.",
+  "tables": {
+    "prospeccion": "https://docs.google.com/spreadsheets/d/13Dec1N9uBNxxsYKpRsxdAMble3HJ46wv/edit"
+  }
+}

@@ -8,13 +8,26 @@ set -euo pipefail
 
 KATALOG="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONFIG="${GSHEETS_CONFIG:-$KATALOG/.gsheets.json}"
+ALIASY="$KATALOG/.gsheets-tables.json"
 
-[ -f "$CONFIG" ] || { echo "Не найден файл настроек: $CONFIG" >&2; exit 1; }
+# Адрес и пароль: сначала переменные окружения, потом файл настроек. Переменные
+# нужны там, где файла нет и не может быть, — в облачных сессиях репозиторий
+# клонируется заново, а .gsheets.json в git не хранится.
+URL="${GSHEETS_URL:-}"
+TOKEN="${GSHEETS_TOKEN:-}"
 
-URL="$(jq -r '.url'   "$CONFIG")"
-TOKEN="$(jq -r '.token' "$CONFIG")"
-[ -n "$URL" ] && [ "$URL" != "null" ]     || { echo "В настройках не заполнен url" >&2; exit 1; }
-[ -n "$TOKEN" ] && [ "$TOKEN" != "null" ] || { echo "В настройках не заполнен token" >&2; exit 1; }
+if [ -z "$URL" ] || [ -z "$TOKEN" ]; then
+  if [ -f "$CONFIG" ]; then
+    [ -n "$URL" ]   || URL="$(jq -r '.url   // empty' "$CONFIG")"
+    [ -n "$TOKEN" ] || TOKEN="$(jq -r '.token // empty' "$CONFIG")"
+  else
+    echo "Нет ни переменных GSHEETS_URL/GSHEETS_TOKEN, ни файла настроек: $CONFIG" >&2
+    exit 1
+  fi
+fi
+
+[ -n "$URL" ]   || { echo "Не задан url (GSHEETS_URL или поле url в $CONFIG)" >&2; exit 1; }
+[ -n "$TOKEN" ] || { echo "Не задан token (GSHEETS_TOKEN или поле token в $CONFIG)" >&2; exit 1; }
 
 if [ "${1:-}" = "ping" ]; then
   curl -sS -L "$URL"
@@ -27,11 +40,21 @@ ISTOCHNIK="${1:-}"
 
 if [ "$ISTOCHNIK" = "-" ]; then ZAPROS="$(cat)"; else ZAPROS="$(cat "$ISTOCHNIK")"; fi
 
-# Короткое имя таблицы из раздела tables -> ссылка.
+# Короткое имя таблицы -> ссылка. Ссылки на таблицы не секрет, поэтому они лежат
+# в .gsheets-tables.json и хранятся в git; раздел tables из .gsheets.json их
+# перекрывает, если там то же имя.
 ALIAS="$(printf '%s' "$ZAPROS" | jq -r '.table // empty')"
 if [ -n "$ALIAS" ]; then
-  SSYLKA="$(jq -r --arg a "$ALIAS" '.tables[$a] // empty' "$CONFIG")"
-  [ -n "$SSYLKA" ] || { echo "Таблица '$ALIAS' не описана в разделе tables" >&2; exit 1; }
+  TABLICY='{}'
+  [ -f "$ALIASY" ] && TABLICY="$(jq -c '.tables // {}' "$ALIASY")"
+  [ -f "$CONFIG" ] && TABLICY="$(jq -c -n --argjson a "$TABLICY" \
+      --argjson b "$(jq -c '.tables // {}' "$CONFIG")" '$a + $b')"
+  SSYLKA="$(printf '%s' "$TABLICY" | jq -r --arg a "$ALIAS" '.[$a] // empty')"
+  if [ -z "$SSYLKA" ]; then
+    IZVESTNY="$(printf '%s' "$TABLICY" | jq -r 'keys | join(", ")')"
+    echo "Таблица '$ALIAS' не описана. Известные: ${IZVESTNY:-нет ни одной}" >&2
+    exit 1
+  fi
   ZAPROS="$(printf '%s' "$ZAPROS" | jq --arg s "$SSYLKA" 'del(.table) | .spreadsheetId = $s')"
 fi
 
@@ -49,6 +72,14 @@ for POPYTKA in 1 2 3 4; do
   if OTVET="$(curl -sS -L --fail-with-body \
        -H 'Content-Type: application/json; charset=utf-8' \
        --data-binary "$TELO" "$URL" 2>/dev/null)"; then
+    # Изредка Google перебрасывает POST обратно на /exec, и приходит ответ doGet —
+    # «пинг» с ok:true, не имеющий никакого отношения к запросу. Принять его за
+    # результат опаснее всего при записи: выглядит как успех, а не сделано ничего.
+    if printf '%s' "$OTVET" | jq -e 'type == "object" and has("ping")' >/dev/null 2>&1; then
+      if [ "$POPYTKA" -lt 4 ]; then sleep $((2 * POPYTKA)); continue; fi
+      echo "Google вернул ответ-пинг вместо результата запроса, 4 попытки подряд" >&2
+      exit 1
+    fi
     printf '%s\n' "$OTVET"
     exit 0
   fi
