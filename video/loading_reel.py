@@ -293,7 +293,7 @@ def main():
         enc += ["-ss", str(a.music_start), "-i", a.music, "-map", "0:v", "-map", "1:a",
                 "-c:a", "aac", "-b:a", "192k",
                 "-af", f"afade=t=out:st={total / FPS - 0.4:.2f}:d=0.4"]
-    enc += ["-t", f"{total / FPS:.3f}", "-c:v", "libx264", "-preset", "medium", "-crf", "16",
+    enc += ["-t", f"{total / FPS:.3f}", "-c:v", "libx264", "-preset", "slow", "-crf", "19", "-maxrate", "20M", "-bufsize", "40M",
             "-pix_fmt", "yuv420p", "-movflags", "+faststart", a.out]
     proc = subprocess.Popen(enc, stdin=subprocess.PIPE)
 

@@ -6,3 +6,6 @@
 zapros*.json
 otvet*.json
 .gsheets-tmp/
+
+# Python
+__pycache__/
