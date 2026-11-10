@@ -68,16 +68,21 @@ Con `GSHEETS_CONFIG` se puede apuntar a otro archivo de configuración.
 
 ## Vídeo: reel «Loading…»
 
-`video/loading_reel.py` monta un reel vertical (1080x1920, 30 fps, ~7,3 s) con la estructura
-de un reel de referencia: planos de obra cortados cada vez más rápido, barra de carga que se
-llena en ~5 s, y al llegar al 100 % un plano final con créditos pequeños y un título gigante
-rosa. Necesita `ffmpeg` y Pillow; las fuentes (licencia OFL) están en `video/fonts/`.
+`video/loading_reel.py` monta un reel vertical (1080x1920, 30 fps) con la estructura de un
+reel de referencia: planos de obra cortados cada vez más rápido, barra de carga que se llena
+en ~5 s y, al llegar al 100 %, el vídeo final con «L'aixeta / Reformas» en Playfair Display.
+
+- Las fotos se enderezan (EXIF), se recortan a 9:16 y de cada una salen además 2 encuadres
+  de detalle (`--details`), para que haya variedad aunque haya pocas fotos.
+- Todo (fotos y vídeo final) pasa por el look editorial de `video/editorial.py`: igualado de
+  balance de blancos, exposición y contraste por archivo, y después color apagado, negros
+  mate, virado cálido crema/marrón, viñeta suave y grano.
+- Necesita `ffmpeg`, Pillow y numpy. Fuentes (licencia OFL) en `video/fonts/`.
 
 ```bash
-python3 video/loading_reel.py --clips obra/*.mp4 --reveal final.mp4 \
-  --title SON --credits "Nombre Uno" "Nombre Dos" --subtitle presentan \
-  --music musica.mp3 --out reel.mp4
+python3 video/loading_reel.py --clips fotos/*.JPG --reveal final.MOV --reveal-dur 3 \
+  --export-stills fotos_9x16/ --out reel.mp4
 ```
 
-Opciones útiles: `--speed 1.5` (más metraje de obra), `--reveal-dur 2` (plano final más
-largo), `--reveal-start 3.2` (desde qué segundo del clip final), `--music-start 12`.
+Opciones útiles: `--music musica.mp3 --music-start 12`, `--speed 1.5` (más metraje de obra),
+`--reveal-start 1.2` (desde qué segundo del vídeo final), `--title` / `--title2`.
