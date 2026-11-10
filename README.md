@@ -65,3 +65,19 @@ Con `GSHEETS_CONFIG` se puede apuntar a otro archivo de configuración.
 - Si la contraseña se filtra: cambia `TOKEN` en Apps Script, vuelve a implementar con
   **Nueva versión** y actualiza `.gsheets.json`. La dirección no cambia.
 - Borrar una hoja es irreversible y exige `"confirm": true` explícito.
+
+## Vídeo: reel «Loading…»
+
+`video/loading_reel.py` monta un reel vertical (1080x1920, 30 fps, ~7,3 s) con la estructura
+de un reel de referencia: planos de obra cortados cada vez más rápido, barra de carga que se
+llena en ~5 s, y al llegar al 100 % un plano final con créditos pequeños y un título gigante
+rosa. Necesita `ffmpeg` y Pillow; las fuentes (licencia OFL) están en `video/fonts/`.
+
+```bash
+python3 video/loading_reel.py --clips obra/*.mp4 --reveal final.mp4 \
+  --title SON --credits "Nombre Uno" "Nombre Dos" --subtitle presentan \
+  --music musica.mp3 --out reel.mp4
+```
+
+Opciones útiles: `--speed 1.5` (más metraje de obra), `--reveal-dur 2` (plano final más
+largo), `--reveal-start 3.2` (desde qué segundo del clip final), `--music-start 12`.
