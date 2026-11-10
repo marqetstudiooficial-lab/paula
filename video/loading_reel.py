@@ -262,6 +262,13 @@ def main():
                     help=">1 alarga las fases de obra (1,5 = 50 %% más de metraje)")
     ap.add_argument("--music", help="audio para el reel (se recorta a la duración)")
     ap.add_argument("--music-start", type=float, default=0.0)
+    ap.add_argument("--no-sync", action="store_true",
+                    help="con --music, no cortar al ritmo sino con los tiempos de la referencia")
+    ap.add_argument("--reveal-at", type=float,
+                    help="segundo en que entra el plano final (por defecto: cuando la música "
+                         "se corta a silencio, o tras el último golpe)")
+    ap.add_argument("--bar-full", type=float, default=0.8,
+                    help="fracción del tiempo hasta el reveal en que la barra llega al 100 %%")
     ap.add_argument("--details", type=int, default=2,
                     help="encuadres de detalle extra que se sacan de cada foto (0 = ninguno)")
     ap.add_argument("--work-dir", default="/tmp/loading_reel",
@@ -277,12 +284,35 @@ def main():
     if is_still(a.reveal):
         a.reveal = prepare_stills([a.reveal], a.work_dir, 0)[0]
 
-    s = a.speed
-    bar_start, bar_full = 4, round(150 * s)          # fotogramas
-    a_end, b_end, c_end = round(99 * s), bar_full, round(188 * s)
-    lengths = cut_lengths(a_end, b_end, c_end, start=bar_start)
-    reveal_n = round(a.reveal_dur * FPS)
-    total = c_end + reveal_n
+    if a.music and not a.no_sync:
+        # Cortes al ritmo: un cambio de foto en cada golpe de la música.
+        import audio_sync
+        hits = [t - a.music_start for t in audio_sync.onsets(a.music) if t > a.music_start]
+        music_len = audio_sync.duration(a.music) - a.music_start
+        rev_t = a.reveal_at
+        if rev_t is None:
+            sil = audio_sync.silence_start(a.music)
+            rev_t = (sil - a.music_start) if sil and sil > a.music_start else hits[-1]
+        reveal_f = round(rev_t * FPS)
+        cut_f = sorted({round(t * FPS) for t in hits if 0 < round(t * FPS) <= reveal_f - 2})
+        bar_start = cut_f[0]
+        bar_full = bar_start + round((reveal_f - bar_start) * a.bar_full)
+        bounds = cut_f + [reveal_f]
+        lengths = [b - a_ for a_, b in zip(bounds, bounds[1:])]
+        if any(f"--reveal-dur" == x for x in sys.argv):
+            reveal_n = round(a.reveal_dur * FPS)
+        else:  # hasta que acaba el audio
+            reveal_n = max(round(music_len * FPS) - reveal_f, FPS)
+        total = reveal_f + reveal_n
+        print(f"sync: {len(lengths)} cortes al ritmo, barra llena en {bar_full / FPS:.2f}s, "
+              f"final en {reveal_f / FPS:.2f}s, total {total / FPS:.2f}s")
+    else:
+        s = a.speed
+        bar_start, bar_full = 4, round(150 * s)          # fotogramas
+        a_end, b_end, c_end = round(99 * s), bar_full, round(188 * s)
+        lengths = cut_lengths(a_end, b_end, c_end, start=bar_start)
+        reveal_n = round(a.reveal_dur * FPS)
+        total = c_end + reveal_n
 
     clips = [Shot(p) for p in shots]
     offsets = {id(c): 0.0 for c in clips}
@@ -292,7 +322,7 @@ def main():
     if a.music:
         enc += ["-ss", str(a.music_start), "-i", a.music, "-map", "0:v", "-map", "1:a",
                 "-c:a", "aac", "-b:a", "192k",
-                "-af", f"afade=t=out:st={total / FPS - 0.4:.2f}:d=0.4"]
+                "-af", f"afade=t=out:st={total / FPS - 0.15:.2f}:d=0.15"]
     enc += ["-t", f"{total / FPS:.3f}", "-c:v", "libx264", "-preset", "slow", "-crf", "19", "-maxrate", "20M", "-bufsize", "40M",
             "-pix_fmt", "yuv420p", "-movflags", "+faststart", a.out]
     proc = subprocess.Popen(enc, stdin=subprocess.PIPE)

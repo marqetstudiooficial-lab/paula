@@ -84,5 +84,10 @@ python3 video/loading_reel.py --clips fotos/*.JPG --reveal final.MOV --reveal-du
   --export-stills fotos_9x16/ --out reel.mp4
 ```
 
-Opciones útiles: `--music musica.mp3 --music-start 12`, `--speed 1.5` (más metraje de obra),
+Con `--music audio.mp4` las fotos cambian **en cada golpe de la música** (`video/audio_sync.py`
+detecta los cambios de sonido) y el vídeo final entra cuando el audio se corta a silencio; el
+reel dura lo mismo que el audio. `--no-sync` vuelve a los tiempos fijos de la referencia y
+`--reveal-at 6.2` fuerza el momento del final.
+
+Otras opciones: `--music-start 12`, `--speed 1.5` (más metraje de obra),
 `--reveal-start 1.2` (desde qué segundo del vídeo final), `--title` / `--title2`.
