@@ -27,8 +27,8 @@ W, H, FPS = 1080, 1920, 30
 FONTS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts")
 
 # Geometría fija de la lona en el encuadre (px de 1080x1920)
-LONA_W = 940
-GROUND_Y = 1520            # donde apoyan los pies
+LONA_W = 788             # 73 % del ancho, como en la foto de referencia
+GROUND_Y = 1286          # pies al 67 % de la altura (tela del 45 % al 63 %)
 FEET_H = 46
 POST_W = 18
 
